@@ -333,23 +333,28 @@
 
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'synctime-app';
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
-            apiKey: "demo-api-key",
-            authDomain: "demo-app.firebaseapp.com",
-            projectId: "demo-app",
-            storageBucket: "demo-app.appspot.com",
-            messagingSenderId: "123456789",
-            appId: "1:123456789:web:abcdef"
+            apiKey: "AIzaSyADAoN35PiclC_M5OV9W_rsu0Tv8zh18X4",
+            authDomain: "synctime-a382e.firebaseapp.com",
+            projectId: "synctime-a382e",
+            storageBucket: "synctime-a382e.firebasestorage.app",
+            messagingSenderId: "473983132507",
+            appId: "1:473983132507:web:f3e523ad167245f280f07e",
+            measurementId: "G-36K58NJJ6G"
         };
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
 
+        // Fallback local ID in case auth is delayed or offline
+        let localFallbackId = localStorage.getItem('synctime_fallback_id') || ('USER-' + Math.random().toString(36).substring(2, 8).toUpperCase());
+        localStorage.setItem('synctime_fallback_id', localFallbackId);
+
         // State variables
         let currentUser = null;
         let userProfile = {
             displayName: 'Friend ' + Math.floor(1000 + Math.random() * 9000),
-            shareCode: '',
+            shareCode: localFallbackId,
             realWeekAnchor: 'A',
             friends: []
         };
@@ -369,7 +374,21 @@
         let currentEditingSlot = null;
         let currentSelectedModalStatus = 'free';
 
+        function updateShareCodeUI(code) {
+            const activeCode = code || userProfile.shareCode || localFallbackId;
+            userProfile.shareCode = activeCode;
+            
+            const headerCode = document.getElementById('headerCodeText');
+            const displayCode = document.getElementById('shareCodeDisplay');
+            const modalCode = document.getElementById('modalShareCode');
+
+            if (headerCode) headerCode.innerText = activeCode.length > 10 ? activeCode.substring(0, 8) + '...' : activeCode;
+            if (displayCode) displayCode.value = activeCode;
+            if (modalCode) modalCode.value = activeCode;
+        }
+
         window.addEventListener('DOMContentLoaded', async () => {
+            updateShareCodeUI(localFallbackId);
             initAuth();
             renderTimetableGrid();
             updateUIWeekState();
@@ -384,19 +403,18 @@
                 }
             } catch (err) {
                 console.warn('Auth fallback to anonymous session', err);
-                await signInAnonymously(auth);
+                updateShareCodeUI(localFallbackId);
             }
 
             onAuthStateChanged(auth, async (user) => {
                 if (user) {
                     currentUser = user;
-                    userProfile.shareCode = user.uid;
-                    document.getElementById('headerCodeText').innerText = user.uid.substring(0, 8) + '...';
-                    document.getElementById('shareCodeDisplay').value = user.uid;
-                    document.getElementById('modalShareCode').value = user.uid;
+                    updateShareCodeUI(user.uid);
 
                     await loadUserProfile();
                     await listenToMyTimetable();
+                } else {
+                    updateShareCodeUI(localFallbackId);
                 }
             });
         }
@@ -406,9 +424,10 @@
             const userDocRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'info');
             
             onSnapshot(userDocRef, (snap) => {
+                const currentCode = currentUser ? currentUser.uid : localFallbackId;
                 if (snap.exists()) {
                     const data = snap.data();
-                    userProfile = { ...userProfile, ...data };
+                    userProfile = { ...userProfile, ...data, shareCode: currentCode };
                     if (!userProfile.friends) userProfile.friends = [];
 
                     userProfile.friends.forEach(fId => {
@@ -420,10 +439,12 @@
                     document.getElementById('headerDisplayName').innerText = userProfile.displayName;
                     document.getElementById('profileNameInput').value = userProfile.displayName;
                     document.getElementById('currentRealWeekBadge').innerText = `Week ${userProfile.realWeekAnchor || 'A'}`;
+                    updateShareCodeUI(currentCode);
                     
                     loadFriendsData();
                 } else {
                     saveProfileToFirestore();
+                    updateShareCodeUI(currentCode);
                 }
             }, (err) => console.error("Profile listen error:", err));
         }
@@ -907,10 +928,11 @@
         };
 
         window.copyShareCode = function() {
-            if (!userProfile.shareCode) return;
+            const codeToCopy = userProfile.shareCode || (currentUser ? currentUser.uid : localFallbackId);
+            if (!codeToCopy) return;
             
             const tempInput = document.createElement('input');
-            tempInput.value = userProfile.shareCode;
+            tempInput.value = codeToCopy;
             document.body.appendChild(tempInput);
             tempInput.select();
             document.execCommand('copy');
