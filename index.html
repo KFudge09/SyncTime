@@ -297,6 +297,13 @@
                 </div>
             </div>
 
+            <div class="pt-2 border-t border-slate-700/80">
+                <label class="block text-xs font-semibold text-rose-400 mb-1">Danger Zone</label>
+                <button onclick="resetAllMyData()" class="w-full py-2.5 px-3 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-300 text-xs font-semibold rounded-xl transition-all flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-triangle-exclamation"></i> Reset & Wipe All Timetable Data
+                </button>
+            </div>
+
             <div class="pt-3 border-t border-slate-700/80 flex justify-end gap-2">
                 <button onclick="closeProfileModal()" class="px-4 py-2 text-xs font-medium text-slate-300 hover:bg-slate-700 rounded-xl transition-colors">Close</button>
                 <button onclick="saveUserProfile()" class="px-4 py-2 text-xs font-semibold bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl shadow-md shadow-cyan-600/20 transition-all">Save Changes</button>
@@ -354,7 +361,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, getDoc, onSnapshot, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'synctime-app';
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
@@ -1071,6 +1078,49 @@
                 await saveTimetableToFirestore();
                 closeProfileModal();
                 showToast("Profile updated!", "success");
+            }
+        };
+
+        window.resetAllMyData = async function() {
+            if (!currentUser) return;
+            
+            // Custom confirmation modal check replacement
+            if (!confirm("Are you sure you want to completely wipe all your timetable schedules and friend connections? This cannot be undone.")) {
+                return;
+            }
+
+            try {
+                // Reset local state
+                myTimetable = { 'A': {}, 'B': {} };
+                userProfile.friends = [];
+                selectedFriendsForComparison.clear();
+
+                // Clear remote Firestore data documents
+                const timetableRef = doc(db, 'artifacts', appId, 'public', 'data', 'timetables', currentUser.uid);
+                const profileRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'info');
+
+                await setDoc(timetableRef, {
+                    userId: currentUser.uid,
+                    displayName: userProfile.displayName,
+                    timetable: myTimetable,
+                    updatedAt: new Date().toISOString()
+                }, { merge: false });
+
+                await setDoc(profileRef, {
+                    displayName: userProfile.displayName,
+                    shareCode: currentUser.uid,
+                    realWeekAnchor: 'A',
+                    friends: []
+                }, { merge: false });
+
+                closeProfileModal();
+                renderFriendsList();
+                populateFriendDropdown();
+                renderTimetableGrid();
+                showToast("All data wiped and reset successfully!", "success");
+            } catch (err) {
+                console.error("Reset data error:", err);
+                showToast("Failed to reset data.", "error");
             }
         };
 
