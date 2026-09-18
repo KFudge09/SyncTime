@@ -59,10 +59,6 @@
                         <i class="fa-regular fa-copy mr-1"></i> ID: <span id="headerCodeText">...</span>
                     </span>
                 </div>
-                <button onclick="openHostingGuideModal()" class="px-3 py-1.5 text-xs font-medium bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg transition-colors flex items-center gap-1.5 border border-slate-600">
-                    <i class="fa-solid fa-server text-cyan-400"></i>
-                    <span class="hidden sm:inline">Free Hosting Guide</span>
-                </button>
                 <button id="editProfileBtn" onclick="openProfileModal()" class="w-9 h-9 rounded-full bg-slate-700 hover:bg-slate-600 border border-slate-600 flex items-center justify-center text-slate-300 transition-colors" title="Edit Profile">
                     <i class="fa-solid fa-user-gear text-sm"></i>
                 </button>
@@ -307,50 +303,6 @@
             <div class="pt-3 border-t border-slate-700/80 flex justify-end gap-2">
                 <button onclick="closeProfileModal()" class="px-4 py-2 text-xs font-medium text-slate-300 hover:bg-slate-700 rounded-xl transition-colors">Close</button>
                 <button onclick="saveUserProfile()" class="px-4 py-2 text-xs font-semibold bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl shadow-md shadow-cyan-600/20 transition-all">Save Changes</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Free Hosting & Setup Instructions Modal -->
-    <div id="hostingGuideModal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-2xl w-full p-6 shadow-2xl flex flex-col gap-4 max-h-[90vh] overflow-y-auto">
-            <div class="flex items-center justify-between border-b border-slate-700/80 pb-3">
-                <h3 class="text-base font-bold text-slate-100 flex items-center gap-2">
-                    <i class="fa-solid fa-cloud-arrow-up text-cyan-400"></i> How to Host Completely Free
-                </h3>
-                <button onclick="closeHostingGuideModal()" class="text-slate-400 hover:text-slate-200"><i class="fa-solid fa-xmark text-lg"></i></button>
-            </div>
-
-            <div class="space-y-4 text-xs text-slate-300 leading-relaxed">
-                <p>You can host this entire web application for <strong>$0/month</strong> forever using GitHub Pages, Netlify, or Vercel combined with Firebase's free tier!</p>
-
-                <div class="bg-slate-900/80 p-3.5 rounded-xl border border-slate-700/60 space-y-2">
-                    <h4 class="font-bold text-cyan-400 text-sm flex items-center gap-1.5"><i class="fa-brands fa-github"></i> Option 1: GitHub Pages (Easiest)</h4>
-                    <ol class="list-decimal list-inside space-y-1 text-slate-400">
-                        <li>Create a free repository on GitHub (e.g. <code class="text-cyan-300 bg-slate-800 px-1 rounded">timetable-share</code>).</li>
-                        <li>Upload this <code class="text-cyan-300 bg-slate-800 px-1 rounded">index.html</code> file directly into the repository.</li>
-                        <li>Go to <strong>Settings &gt; Pages</strong> in your GitHub repo and select <code class="text-cyan-300 bg-slate-800 px-1 rounded">main</code> branch.</li>
-                        <li>Your app will be published instantly at <code class="text-cyan-300 bg-slate-800 px-1 rounded">https://yourusername.github.io/timetable-share</code>.</li>
-                    </ol>
-                </div>
-
-                <div class="bg-slate-900/80 p-3.5 rounded-xl border border-slate-700/60 space-y-2">
-                    <h4 class="font-bold text-emerald-400 text-sm flex items-center gap-1.5"><i class="fa-solid fa-bolt"></i> Option 2: Netlify / Vercel Drop</h4>
-                    <ol class="list-decimal list-inside space-y-1 text-slate-400">
-                        <li>Go to <strong>app.netlify.com/drop</strong> or Vercel dashboard.</li>
-                        <li>Drag and drop the folder containing <code class="text-cyan-300 bg-slate-800 px-1 rounded">index.html</code>.</li>
-                        <li>You will immediately get a shareable live HTTPS URL for free!</li>
-                    </ol>
-                </div>
-
-                <div class="bg-slate-900/80 p-3.5 rounded-xl border border-slate-700/60 space-y-2">
-                    <h4 class="font-bold text-amber-400 text-sm flex items-center gap-1.5"><i class="fa-solid fa-database"></i> Firebase Free Tier (Firestore)</h4>
-                    <p class="text-slate-400">This app uses Firebase Firestore for zero-cost real-time schedule syncing across you and all your friends! It operates completely on client-side JS with zero back-end server required.</p>
-                </div>
-            </div>
-
-            <div class="pt-3 border-t border-slate-700/80 flex justify-end">
-                <button onclick="closeHostingGuideModal()" class="px-4 py-2 text-xs font-semibold bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl transition-all">Got it!</button>
             </div>
         </div>
     </div>
@@ -1084,18 +1036,15 @@
         window.resetAllMyData = async function() {
             if (!currentUser) return;
             
-            // Custom confirmation modal check replacement
             if (!confirm("Are you sure you want to completely wipe all your timetable schedules and friend connections? This cannot be undone.")) {
                 return;
             }
 
             try {
-                // Reset local state
                 myTimetable = { 'A': {}, 'B': {} };
                 userProfile.friends = [];
                 selectedFriendsForComparison.clear();
 
-                // Clear remote Firestore data documents
                 const timetableRef = doc(db, 'artifacts', appId, 'public', 'data', 'timetables', currentUser.uid);
                 const profileRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'info');
 
@@ -1122,14 +1071,6 @@
                 console.error("Reset data error:", err);
                 showToast("Failed to reset data.", "error");
             }
-        };
-
-        window.openHostingGuideModal = function() {
-            document.getElementById('hostingGuideModal').classList.remove('hidden');
-        };
-
-        window.closeHostingGuideModal = function() {
-            document.getElementById('hostingGuideModal').classList.add('hidden');
         };
 
         window.copyShareCode = function() {
@@ -1159,7 +1100,7 @@
             
             toastBox.appendChild(toast);
 
-            requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
                 toast.classList.remove('translate-y-2', 'opacity-0');
             });
 
