@@ -249,6 +249,31 @@
         </div>
     </div>
 
+    <!-- Compare Slot Detail Modal -->
+    <div id="compareSlotModal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-md w-full p-6 shadow-2xl flex flex-col gap-4 max-h-[85vh] overflow-y-auto">
+            <div class="flex items-center justify-between border-b border-slate-700/80 pb-3">
+                <h3 class="text-base font-bold text-slate-100 flex items-center gap-2">
+                    <i class="fa-solid fa-users-viewfinder text-cyan-400"></i> Availability Details
+                </h3>
+                <button onclick="closeCompareModal()" class="text-slate-400 hover:text-slate-200"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+
+            <div class="text-xs text-slate-400 font-mono bg-slate-900/60 p-2.5 rounded-xl border border-slate-700/50" id="compareModalTimeLabel">
+                Week A • Monday @ 09:00 - 10:00
+            </div>
+
+            <!-- Detailed Breakdown Content -->
+            <div id="compareModalContent" class="space-y-3">
+                <!-- Populated dynamically via JavaScript -->
+            </div>
+
+            <div class="pt-3 border-t border-slate-700/80 flex justify-end">
+                <button onclick="closeCompareModal()" class="px-4 py-2 text-xs font-semibold bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-xl transition-all">Close</button>
+            </div>
+        </div>
+    </div>
+
     <!-- User Profile Modal -->
     <div id="profileModal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
         <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-md w-full p-6 shadow-2xl flex flex-col gap-4">
@@ -728,59 +753,80 @@
                     } else {
                         // "Free/Flexible Sync" Compare Mode
                         const myStatus = myTimetable[activeWeek]?.[slotKey]?.status || 'none';
+                        const myNote = myTimetable[activeWeek]?.[slotKey]?.note || '';
                         const selectedFriendIds = Array.from(selectedFriendsForComparison);
 
-                        let freeOrFlexCount = 0;
-                        let pureFreeCount = 0;
-                        let busyCount = 0;
-                        let totalPeople = 1;
+                        let availablePeople = [];
 
-                        if (myStatus === 'free') { pureFreeCount++; freeOrFlexCount++; }
-                        else if (myStatus === 'flexible') { freeOrFlexCount++; }
-                        else if (myStatus === 'busy' || myStatus === 'work') { busyCount++; }
-
-                        selectedFriendIds.forEach(fId => {
-                            const friendSchedule = friendsTimetables[fId]?.timetable;
-                            const fStatus = friendSchedule?.[activeWeek]?.[slotKey]?.status || 'none';
-                            if (fStatus === 'free') { pureFreeCount++; freeOrFlexCount++; }
-                            else if (fStatus === 'flexible') { freeOrFlexCount++; }
-                            else if (fStatus === 'busy' || fStatus === 'work') { busyCount++; }
-                            totalPeople++;
-                        });
-
-                        const isAllPureFree = pureFreeCount === totalPeople && totalPeople > 0;
-                        const isAllFreeOrFlex = freeOrFlexCount === totalPeople && totalPeople > 0;
-
-                        let compareBg = 'bg-slate-900/20 border-slate-800 text-slate-500';
-                        if (isAllPureFree) {
-                            compareBg = 'bg-emerald-500/30 border-emerald-400 text-emerald-200 font-bold shadow-md shadow-emerald-500/10';
-                        } else if (isAllFreeOrFlex) {
-                            compareBg = 'bg-amber-500/25 border-amber-400/80 text-amber-200 font-semibold';
-                        } else if (freeOrFlexCount > 1) {
-                            compareBg = 'bg-cyan-500/20 border-cyan-500/40 text-cyan-300';
-                        } else if (busyCount > 0) {
-                            compareBg = 'bg-slate-900/60 border-slate-800 text-slate-500 opacity-60';
+                        // Always put 'You' first if free or flexible
+                        if (myStatus === 'free' || myStatus === 'flexible') {
+                            availablePeople.push({
+                                name: 'You',
+                                isYou: true,
+                                status: myStatus,
+                                note: myNote
+                            });
                         }
 
-                        slotCell.className = `min-h-[44px] p-1.5 rounded-xl border text-xs transition-all flex flex-col items-center justify-center text-center ${compareBg}`;
-                        
-                        if (isAllPureFree) {
-                            slotCell.innerHTML = `
-                                <span class="text-[10px] text-emerald-400 font-bold uppercase tracking-wider flex items-center gap-1">
-                                    <i class="fa-solid fa-star text-[9px]"></i> Perfect Sync
-                                </span>
-                                <span class="text-[9px] text-emerald-300">${pureFreeCount}/${totalPeople} Free</span>
-                            `;
-                        } else if (isAllFreeOrFlex) {
-                            slotCell.innerHTML = `
-                                <span class="text-[10px] text-amber-300 font-bold uppercase tracking-wider flex items-center gap-1">
-                                    <i class="fa-solid fa-handshake text-[9px]"></i> Flex Sync
-                                </span>
-                                <span class="text-[9px] text-amber-200">${freeOrFlexCount}/${totalPeople} Available</span>
-                            `;
+                        // Collect friends who are free or flexible
+                        let friendItems = [];
+                        selectedFriendIds.forEach(fId => {
+                            const friendData = friendsTimetables[fId];
+                            const friendSchedule = friendData?.timetable;
+                            const fStatus = friendSchedule?.[activeWeek]?.[slotKey]?.status || 'none';
+                            const fNote = friendSchedule?.[activeWeek]?.[slotKey]?.note || '';
+                            if (fStatus === 'free' || fStatus === 'flexible') {
+                                friendItems.push({
+                                    name: friendData?.displayName || `Friend (${fId.substring(0, 6)})`,
+                                    isYou: false,
+                                    status: fStatus,
+                                    note: fNote
+                                });
+                            }
+                        });
+
+                        // Sort friends alphabetically by name
+                        friendItems.sort((a, b) => a.name.localeCompare(b.name));
+
+                        // Combine: 'You' first, then sorted friends
+                        availablePeople = availablePeople.concat(friendItems);
+
+                        let pureFreeCount = (myStatus === 'free' ? 1 : 0) + selectedFriendIds.filter(fId => friendsTimetables[fId]?.timetable?.[activeWeek]?.[slotKey]?.status === 'free').length;
+                        let totalPeople = 1 + selectedFriendIds.length;
+                        let totalAvailable = availablePeople.length;
+
+                        let compareBg = 'bg-slate-900/30 border-slate-800 text-slate-500 hover:border-slate-700 cursor-pointer';
+                        if (totalAvailable > 0) {
+                            if (pureFreeCount === totalPeople) {
+                                compareBg = 'bg-emerald-500/25 border-emerald-400/80 text-emerald-200 shadow-sm hover:bg-emerald-500/35 cursor-pointer';
+                            } else if (totalAvailable === totalPeople) {
+                                compareBg = 'bg-amber-500/25 border-amber-400/80 text-amber-200 hover:bg-amber-500/35 cursor-pointer';
+                            } else {
+                                compareBg = 'bg-cyan-500/20 border-cyan-500/40 text-cyan-200 hover:bg-cyan-500/30 cursor-pointer';
+                            }
+                        }
+
+                        slotCell.className = `min-h-[46px] p-1.5 rounded-xl border text-xs transition-all flex flex-col justify-center gap-0.5 ${compareBg}`;
+                        slotCell.onclick = () => openCompareModal(day, hourFormatted);
+
+                        if (totalAvailable === 0) {
+                            slotCell.innerHTML = `<span class="text-[10px] text-slate-500 text-center block">Unavailable</span>`;
                         } else {
+                            let displayNamesStr = '';
+                            let remainingCount = 0;
+
+                            if (availablePeople.length === 1) {
+                                displayNamesStr = availablePeople[0].name;
+                            } else if (availablePeople.length === 2) {
+                                displayNamesStr = `${availablePeople[0].name}, ${availablePeople[1].name}`;
+                            } else {
+                                displayNamesStr = availablePeople[0].name;
+                                remainingCount = availablePeople.length - 1;
+                            }
+
                             slotCell.innerHTML = `
-                                <span class="text-[10px] font-medium">${freeOrFlexCount}/${totalPeople} Available</span>
+                                <div class="text-[10px] font-semibold truncate leading-tight">${escapeHtml(displayNamesStr)}</div>
+                                ${remainingCount > 0 ? `<div class="text-[9px] font-bold text-cyan-400 opacity-90">+ ${remainingCount} other${remainingCount > 1 ? 's' : ''}</div>` : ''}
                             `;
                         }
                     }
@@ -896,6 +942,115 @@
             closeSlotModal();
             renderTimetableGrid();
             showToast("Cell cleared successfully", "info");
+        };
+
+        window.openCompareModal = function(day, hour) {
+            const slotKey = `${day}_${hour}`;
+            document.getElementById('compareModalTimeLabel').innerText = `Week ${activeWeek} • ${day} @ ${hour}`;
+
+            const selectedFriendIds = Array.from(selectedFriendsForComparison);
+            let allParticipants = [];
+
+            // Add 'You'
+            const myStatus = myTimetable[activeWeek]?.[slotKey]?.status || 'none';
+            const myNote = myTimetable[activeWeek]?.[slotKey]?.note || '';
+            allParticipants.push({
+                name: 'You',
+                isYou: true,
+                status: myStatus,
+                note: myNote
+            });
+
+            // Add selected friends
+            let friendList = [];
+            selectedFriendIds.forEach(fId => {
+                const friendData = friendsTimetables[fId];
+                const fStatus = friendData?.timetable?.[activeWeek]?.[slotKey]?.status || 'none';
+                const fNote = friendData?.timetable?.[activeWeek]?.[slotKey]?.note || '';
+                friendList.push({
+                    name: friendData?.displayName || `Friend (${fId.substring(0, 6)})`,
+                    isYou: false,
+                    status: fStatus,
+                    note: fNote
+                });
+            });
+
+            // Sort friends alphabetically
+            friendList.sort((a, b) => a.name.localeCompare(b.name));
+            allParticipants = allParticipants.concat(friendList);
+
+            const freeList = allParticipants.filter(p => p.status === 'free');
+            const flexList = allParticipants.filter(p => p.status === 'flexible');
+            const unavailableList = allParticipants.filter(p => p.status !== 'free' && p.status !== 'flexible');
+
+            const contentDiv = document.getElementById('compareModalContent');
+            contentDiv.innerHTML = '';
+
+            // Render Free section
+            if (freeList.length > 0) {
+                contentDiv.innerHTML += `
+                    <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-3 flex flex-col gap-2">
+                        <div class="text-xs font-bold text-emerald-400 flex items-center justify-between">
+                            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Free (${freeList.length})</span>
+                        </div>
+                        <div class="flex flex-col gap-1.5">
+                            ${freeList.map(p => `
+                                <div class="bg-slate-900/60 p-2 rounded-lg border border-slate-700/40 text-xs flex flex-col">
+                                    <span class="font-semibold text-slate-200">${escapeHtml(p.name)}</span>
+                                    ${p.note ? `<span class="text-[11px] text-emerald-300 italic mt-0.5">"${escapeHtml(p.note)}"</span>` : ''}
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Render Flexible section
+            if (flexList.length > 0) {
+                contentDiv.innerHTML += `
+                    <div class="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 flex flex-col gap-2">
+                        <div class="text-xs font-bold text-amber-400 flex items-center justify-between">
+                            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span> Flexible (${flexList.length})</span>
+                        </div>
+                        <div class="flex flex-col gap-1.5">
+                            ${flexList.map(p => `
+                                <div class="bg-slate-900/60 p-2 rounded-lg border border-slate-700/40 text-xs flex flex-col">
+                                    <span class="font-semibold text-slate-200">${escapeHtml(p.name)}</span>
+                                    ${p.note ? `<span class="text-[11px] text-amber-300 italic mt-0.5">"${escapeHtml(p.note)}"</span>` : ''}
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Render Unavailable / Busy section
+            if (unavailableList.length > 0) {
+                contentDiv.innerHTML += `
+                    <div class="bg-slate-900/40 border border-slate-800 rounded-xl p-3 flex flex-col gap-2">
+                        <div class="text-xs font-bold text-slate-400 flex items-center justify-between">
+                            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-slate-600"></span> Busy / Not Available (${unavailableList.length})</span>
+                        </div>
+                        <div class="flex flex-col gap-1.5">
+                            ${unavailableList.map(p => `
+                                <div class="bg-slate-900/80 p-2 rounded-lg border border-slate-800 text-xs flex justify-between items-center text-slate-400">
+                                    <div class="flex flex-col">
+                                        <span class="font-medium text-slate-300">${escapeHtml(p.name)}</span>
+                                        ${p.note ? `<span class="text-[10px] text-slate-500 italic">"${escapeHtml(p.note)}"</span>` : ''}
+                                    </div>
+                                    <span class="text-[10px] capitalize bg-slate-800 px-2 py-0.5 rounded text-slate-400 border border-slate-700">${p.status !== 'none' ? escapeHtml(p.status) : 'not set'}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            document.getElementById('compareSlotModal').classList.remove('hidden');
+        };
+
+        window.closeCompareModal = function() {
+            document.getElementById('compareSlotModal').classList.add('hidden');
         };
 
         window.openProfileModal = function() {
