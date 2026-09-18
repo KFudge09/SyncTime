@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interactive Timetable</title>
+    <title>Shared Availability Timetable</title>
     <style>
         :root {
             --primary: #4f46e5;
@@ -12,9 +12,8 @@
             --card-bg: #ffffff;
             --text: #0f172a;
             --border: #e2e8f0;
-            --free-slot: #ecfdf5;
-            --free-slot-border: #a7f3d0;
-            --busy-slot: #f1f5f9;
+            --badge-bg: #e0e7ff;
+            --badge-text: #3730a3;
         }
 
         * {
@@ -48,6 +47,7 @@
         .controls {
             display: flex;
             gap: 10px;
+            align-items: center;
         }
 
         button {
@@ -85,18 +85,18 @@
 
         .timetable {
             display: grid;
-            grid-template-columns: 80px repeat(5, minmax(120px, 1fr));
-            min-width: 650px;
+            grid-template-columns: 80px repeat(5, minmax(140px, 1fr));
+            min-width: 750px;
         }
 
         .cell {
-            padding: 12px;
+            padding: 10px;
             border-bottom: 1px solid var(--border);
             border-right: 1px solid var(--border);
-            min-height: 70px;
+            min-height: 80px;
             display: flex;
             flex-direction: column;
-            justify-content: center;
+            justify-content: flex-start;
         }
 
         .cell:last-child {
@@ -108,6 +108,8 @@
             font-weight: 600;
             text-align: center;
             align-items: center;
+            justify-content: center;
+            min-height: 50px;
         }
 
         .time-cell {
@@ -116,43 +118,59 @@
             text-align: center;
             font-weight: 500;
             background-color: #fafafa;
+            align-items: center;
+            justify-content: center;
         }
 
         .slot {
             cursor: pointer;
-            border-radius: 4px;
-            transition: all 0.15s ease;
+            transition: background-color 0.15s ease;
         }
 
-        .slot.busy {
-            background-color: var(--busy-slot);
+        .slot:hover {
+            background-color: #f8fafc;
         }
 
-        .slot.free {
-            background-color: var(--free-slot);
-            border: 1px dashed var(--free-slot-border);
+        .label-free {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 700;
+            color: #166534;
+            margin-bottom: 6px;
         }
 
-        .slot-title {
-            font-weight: 600;
-            font-size: 0.9rem;
+        .names-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
         }
 
-        .slot-subtitle {
+        .name-badge {
+            background-color: var(--badge-bg);
+            color: var(--badge-text);
             font-size: 0.75rem;
-            color: #64748b;
-            margin-top: 2px;
+            font-weight: 600;
+            padding: 3px 7px;
+            border-radius: 12px;
+        }
+
+        .none-free {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            font-style: italic;
+            margin-top: 4px;
         }
     </style>
 </head>
 <body>
 
     <header>
-        <h1>Weekly Timetable</h1>
+        <h1>Group Free Time</h1>
         <div class="controls">
             <button class="toggle-btn active" id="weekA-btn" onclick="setWeek('A')">Week A</button>
             <button class="toggle-btn" id="weekB-btn" onclick="setWeek('B')">Week B</button>
-            <button onclick="clearSchedule()">Clear All</button>
+            <button onclick="addPerson()">+ Add Person</button>
         </div>
     </header>
 
@@ -167,19 +185,23 @@
         const times = ['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00'];
         
         let currentWeek = 'A';
-        
-        // Mock Schedule Data Store
-        const scheduleData = {
+
+        // Initial list of people
+        const people = ['Alex', 'Sam', 'Jordan'];
+
+        // Stores who is FREE in each time slot
+        const freeSlots = {
             A: {
-                'Monday-09:00': { title: 'Mathematics', room: 'Room 101' },
-                'Monday-11:00': { title: 'Physics', room: 'Lab 2' },
-                'Wednesday-10:00': { title: 'Computer Science', room: 'Lab 1' },
-                'Friday-14:00': { title: 'History', room: 'Room 204' }
+                'Monday-09:00': ['Alex', 'Sam'],
+                'Monday-10:00': ['Jordan'],
+                'Tuesday-11:00': ['Alex', 'Sam', 'Jordan'],
+                'Wednesday-13:00': ['Sam'],
+                'Friday-15:00': ['Alex', 'Jordan']
             },
             B: {
-                'Tuesday-09:00': { title: 'Chemistry', room: 'Lab 3' },
-                'Thursday-11:00': { title: 'English Literature', room: 'Room 105' },
-                'Friday-09:00': { title: 'Art & Design', room: 'Studio B' }
+                'Monday-10:00': ['Alex', 'Sam', 'Jordan'],
+                'Wednesday-09:00': ['Sam'],
+                'Thursday-14:00': ['Alex']
             }
         };
 
@@ -216,44 +238,53 @@
 
                 days.forEach(day => {
                     const key = `${day}-${time}`;
-                    const slotData = scheduleData[currentWeek][key];
+                    const freePeople = freeSlots[currentWeek][key] || [];
 
                     const slot = document.createElement('div');
-                    slot.className = `cell slot ${slotData ? 'busy' : 'free'}`;
-                    slot.onclick = () => toggleSlot(key);
+                    slot.className = 'cell slot';
+                    slot.onclick = () => editSlot(key);
 
-                    if (slotData) {
-                        slot.innerHTML = `
-                            <div class="slot-title">${slotData.title}</div>
-                            <div class="slot-subtitle">${slotData.room}</div>
-                        `;
+                    let contentHtml = `<div class="label-free">Free</div>`;
+
+                    if (freePeople.length > 0) {
+                        contentHtml += `<div class="names-container">`;
+                        freePeople.forEach(person => {
+                            contentHtml += `<span class="name-badge">${person}</span>`;
+                        });
+                        contentHtml += `</div>`;
                     } else {
-                        slot.innerHTML = `<div class="slot-subtitle">+ Free</div>`;
+                        contentHtml += `<div class="none-free">Nobody</div>`;
                     }
 
+                    slot.innerHTML = contentHtml;
                     container.appendChild(slot);
                 });
             });
         }
 
-        function toggleSlot(key) {
-            const current = scheduleData[currentWeek][key];
-            if (current) {
-                delete scheduleData[currentWeek][key];
-            } else {
-                const title = prompt('Enter event title:');
-                if (title) {
-                    const room = prompt('Enter room/location:') || '';
-                    scheduleData[currentWeek][key] = { title, room };
-                }
+        function editSlot(key) {
+            const currentFree = freeSlots[currentWeek][key] || [];
+            
+            let promptText = `Who is free at ${key.replace('-', ' ')}?\nAvailable people: ${people.join(', ')}\n\nEnter names separated by commas:`;
+            let input = prompt(promptText, currentFree.join(', '));
+
+            if (input !== null) {
+                // Process comma-separated names and trim extra spaces
+                const updatedList = input
+                    .split(',')
+                    .map(name => name.trim())
+                    .filter(name => name.length > 0);
+
+                freeSlots[currentWeek][key] = updatedList;
+                renderTimetable();
             }
-            renderTimetable();
         }
 
-        function clearSchedule() {
-            if (confirm('Clear schedule for Week ' + currentWeek + '?')) {
-                scheduleData[currentWeek] = {};
-                renderTimetable();
+        function addPerson() {
+            const name = prompt('Enter the name of the new person:');
+            if (name && name.trim() !== '') {
+                people.push(name.trim());
+                alert(`${name.trim()} added to the group list! Click any cell to add them.`);
             }
         }
 
