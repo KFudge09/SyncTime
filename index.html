@@ -94,12 +94,16 @@
                 </button>
             </div>
 
-            <div class="flex items-center gap-2 w-full sm:w-auto">
-                <button id="modeMyTimetable" onclick="setViewMode('my')" class="flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-semibold bg-cyan-600 text-white shadow-md shadow-cyan-600/20 hover:bg-cyan-500 transition-all flex items-center justify-center gap-1.5">
+            <!-- View Modes -->
+            <div class="flex items-center gap-2 w-full sm:w-auto overflow-x-auto">
+                <button id="modeMyTimetable" onclick="setViewMode('my')" class="flex-1 sm:flex-none px-3.5 py-2 rounded-xl text-xs font-semibold bg-cyan-600 text-white shadow-md transition-all flex items-center justify-center gap-1.5 whitespace-nowrap">
                     <i class="fa-solid fa-pen-to-square"></i> My Timetable
                 </button>
-                <button id="modeCompareFriends" onclick="setViewMode('compare')" class="flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-semibold bg-slate-700 text-slate-300 hover:bg-slate-600 transition-all flex items-center justify-center gap-1.5 border border-slate-600">
-                    <i class="fa-solid fa-users-viewfinder text-emerald-400"></i> Compare Friends
+                <button id="modeFriendDetail" onclick="setViewMode('friend')" class="flex-1 sm:flex-none px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-700 text-slate-300 hover:bg-slate-600 transition-all flex items-center justify-center gap-1.5 border border-slate-600 whitespace-nowrap">
+                    <i class="fa-solid fa-user text-purple-400"></i> Friend View
+                </button>
+                <button id="modeCompareFriends" onclick="setViewMode('compare')" class="flex-1 sm:flex-none px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-700 text-slate-300 hover:bg-slate-600 transition-all flex items-center justify-center gap-1.5 border border-slate-600 whitespace-nowrap">
+                    <i class="fa-solid fa-users-viewfinder text-emerald-400"></i> Free/Flexible Sync
                 </button>
             </div>
         </div>
@@ -108,6 +112,7 @@
             
             <aside class="lg:col-span-1 flex flex-col gap-5">
                 
+                <!-- Share Code -->
                 <div class="bg-slate-800/50 border border-slate-700/60 rounded-2xl p-4 shadow-lg flex flex-col gap-3">
                     <h2 class="text-sm font-bold text-slate-200 flex items-center gap-2">
                         <i class="fa-solid fa-share-nodes text-cyan-400"></i> My Share Code
@@ -121,6 +126,7 @@
                     </div>
                 </div>
 
+                <!-- Add Friend -->
                 <div class="bg-slate-800/50 border border-slate-700/60 rounded-2xl p-4 shadow-lg flex flex-col gap-3">
                     <h2 class="text-sm font-bold text-slate-200 flex items-center gap-2">
                         <i class="fa-solid fa-user-plus text-emerald-400"></i> Add a Friend
@@ -133,12 +139,19 @@
                     </form>
                 </div>
 
+                <!-- Friends List -->
                 <div class="bg-slate-800/50 border border-slate-700/60 rounded-2xl p-4 shadow-lg flex flex-col gap-3 flex-1">
                     <div class="flex items-center justify-between">
                         <h2 class="text-sm font-bold text-slate-200 flex items-center gap-2">
                             <i class="fa-solid fa-user-group text-purple-400"></i> Friends (<span id="friendCount">0</span>)
                         </h2>
-                        <span class="text-[10px] uppercase font-semibold text-slate-500 tracking-wider">Comparison Check</span>
+                    </div>
+
+                    <!-- Single Friend View Selector -->
+                    <div id="singleFriendSelectorContainer" class="hidden flex-col gap-1 pb-2 border-b border-slate-700/60">
+                        <label class="text-[10px] font-bold uppercase text-purple-400 tracking-wider">Select Friend to View:</label>
+                        <select id="singleFriendDropdown" onchange="renderTimetableGrid()" class="bg-slate-900 border border-slate-700 text-xs text-slate-200 rounded-xl p-2 outline-none focus:border-purple-500">
+                        </select>
                     </div>
 
                     <div id="friendsListContainer" class="flex flex-col gap-2 overflow-y-auto max-h-[320px] lg:max-h-none pr-1">
@@ -147,19 +160,20 @@
                 </div>
             </aside>
 
+            <!-- Main Schedule Grid Section -->
             <section class="lg:col-span-3 bg-slate-800/50 border border-slate-700/60 rounded-2xl p-4 sm:p-5 shadow-lg flex flex-col gap-4 overflow-hidden">
                 
                 <div class="flex flex-wrap items-center justify-between gap-3 bg-slate-900/60 p-3 rounded-xl border border-slate-700/40">
-                    <div class="flex flex-wrap items-center gap-3 text-xs">
+                    <div id="legendContainer" class="flex flex-wrap items-center gap-3 text-xs">
                         <span class="font-semibold text-slate-400">Legend:</span>
-                        <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-emerald-500/80 inline-block border border-emerald-400"></span> Free / Hangout</span>
+                        <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-emerald-500/80 inline-block border border-emerald-400"></span> Free</span>
                         <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-rose-500/80 inline-block border border-rose-400"></span> Busy</span>
                         <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-amber-500/80 inline-block border border-amber-400"></span> Flexible</span>
                         <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-indigo-500/80 inline-block border border-indigo-400"></span> Class / Work</span>
                     </div>
 
                     <div id="comparisonSummaryBadge" class="hidden text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-3 py-1 rounded-lg font-medium">
-                        <i class="fa-solid fa-sparkles mr-1"></i> Overlapping Free Time Mode Active
+                        <i class="fa-solid fa-sparkles mr-1"></i> Overlapping Free & Flexible Sync Active
                     </div>
                 </div>
 
@@ -202,7 +216,7 @@
                 <label class="block text-xs font-semibold text-slate-300 mb-2">Availability Status</label>
                 <div class="grid grid-cols-2 gap-2">
                     <button type="button" onclick="selectModalStatus('free')" id="btnStatusFree" class="p-3 rounded-xl border text-xs font-semibold text-left flex items-center gap-2 transition-all">
-                        <span class="w-3 h-3 rounded-full bg-emerald-500"></span> Free / Hangout
+                        <span class="w-3 h-3 rounded-full bg-emerald-500"></span> Free
                     </button>
                     <button type="button" onclick="selectModalStatus('busy')" id="btnStatusBusy" class="p-3 rounded-xl border text-xs font-semibold text-left flex items-center gap-2 transition-all">
                         <span class="w-3 h-3 rounded-full bg-rose-500"></span> Busy
@@ -338,7 +352,7 @@
         let friendsTimetables = {};
 
         let activeWeek = 'A';
-        let currentViewMode = 'my';
+        let currentViewMode = 'my'; // 'my' | 'friend' | 'compare'
         let selectedFriendsForComparison = new Set();
 
         const HOURS = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
@@ -499,12 +513,20 @@
 
         function renderFriendsList() {
             const container = document.getElementById('friendsListContainer');
+            const dropdown = document.getElementById('singleFriendDropdown');
             document.getElementById('friendCount').innerText = userProfile.friends.length;
 
             if (userProfile.friends.length === 0) {
                 container.innerHTML = `<div class="text-xs text-slate-500 text-center py-6">No friends added yet. Share your code to get started!</div>`;
+                dropdown.innerHTML = '';
                 return;
             }
+
+            dropdown.innerHTML = userProfile.friends.map(friendId => {
+                const friendData = friendsTimetables[friendId];
+                const name = friendData ? friendData.displayName : 'Loading...';
+                return `<option value="${friendId}">${escapeHtml(name)}</option>`;
+            }).join('');
 
             container.innerHTML = userProfile.friends.map(friendId => {
                 const friendData = friendsTimetables[friendId];
@@ -546,17 +568,48 @@
         window.setViewMode = function(mode) {
             currentViewMode = mode;
             const btnMy = document.getElementById('modeMyTimetable');
+            const btnFriend = document.getElementById('modeFriendDetail');
             const btnCompare = document.getElementById('modeCompareFriends');
             const summaryBadge = document.getElementById('comparisonSummaryBadge');
+            const singleFriendSelector = document.getElementById('singleFriendSelectorContainer');
+            const legendContainer = document.getElementById('legendContainer');
+
+            btnMy.className = "flex-1 sm:flex-none px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-700 text-slate-300 hover:bg-slate-600 transition-all flex items-center justify-center gap-1.5 border border-slate-600 whitespace-nowrap";
+            btnFriend.className = "flex-1 sm:flex-none px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-700 text-slate-300 hover:bg-slate-600 transition-all flex items-center justify-center gap-1.5 border border-slate-600 whitespace-nowrap";
+            btnCompare.className = "flex-1 sm:flex-none px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-700 text-slate-300 hover:bg-slate-600 transition-all flex items-center justify-center gap-1.5 border border-slate-600 whitespace-nowrap";
+            
+            summaryBadge.classList.add('hidden');
+            singleFriendSelector.classList.add('hidden');
 
             if (mode === 'my') {
-                btnMy.className = "flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-semibold bg-cyan-600 text-white shadow-md shadow-cyan-600/20 hover:bg-cyan-500 transition-all flex items-center justify-center gap-1.5";
-                btnCompare.className = "flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-semibold bg-slate-700 text-slate-300 hover:bg-slate-600 transition-all flex items-center justify-center gap-1.5 border border-slate-600";
-                summaryBadge.classList.add('hidden');
+                btnMy.className = "flex-1 sm:flex-none px-3.5 py-2 rounded-xl text-xs font-semibold bg-cyan-600 text-white shadow-md shadow-cyan-600/20 hover:bg-cyan-500 transition-all flex items-center justify-center gap-1.5 whitespace-nowrap";
+                legendContainer.innerHTML = `
+                    <span class="font-semibold text-slate-400">Legend:</span>
+                    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-emerald-500/80 inline-block border border-emerald-400"></span> Free</span>
+                    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-rose-500/80 inline-block border border-rose-400"></span> Busy</span>
+                    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-amber-500/80 inline-block border border-amber-400"></span> Flexible</span>
+                    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-indigo-500/80 inline-block border border-indigo-400"></span> Class / Work</span>
+                `;
+            } else if (mode === 'friend') {
+                btnFriend.className = "flex-1 sm:flex-none px-3.5 py-2 rounded-xl text-xs font-semibold bg-purple-600 text-white shadow-md shadow-purple-600/20 hover:bg-purple-500 transition-all flex items-center justify-center gap-1.5 whitespace-nowrap";
+                singleFriendSelector.classList.remove('hidden');
+                singleFriendSelector.classList.add('flex');
+                legendContainer.innerHTML = `
+                    <span class="font-semibold text-slate-400">Legend:</span>
+                    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-emerald-500/80 inline-block border border-emerald-400"></span> Free</span>
+                    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-rose-500/80 inline-block border border-rose-400"></span> Busy</span>
+                    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-amber-500/80 inline-block border border-amber-400"></span> Flexible</span>
+                    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-indigo-500/80 inline-block border border-indigo-400"></span> Class / Work</span>
+                `;
             } else {
-                btnCompare.className = "flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-semibold bg-emerald-600 text-white shadow-md shadow-emerald-600/20 hover:bg-emerald-500 transition-all flex items-center justify-center gap-1.5";
-                btnMy.className = "flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-semibold bg-slate-700 text-slate-300 hover:bg-slate-600 transition-all flex items-center justify-center gap-1.5 border border-slate-600";
+                btnCompare.className = "flex-1 sm:flex-none px-3.5 py-2 rounded-xl text-xs font-semibold bg-emerald-600 text-white shadow-md shadow-emerald-600/20 hover:bg-emerald-500 transition-all flex items-center justify-center gap-1.5 whitespace-nowrap";
                 summaryBadge.classList.remove('hidden');
+                legendContainer.innerHTML = `
+                    <span class="font-semibold text-slate-400">Legend:</span>
+                    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-emerald-500/80 inline-block border border-emerald-400"></span> Green (Free overlaps)</span>
+                    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-amber-500/80 inline-block border border-amber-400"></span> Yellow (Flexible only)</span>
+                    <span class="flex items-center gap-1.5 text-slate-300 font-bold">* Flexible person mixed with free</span>
+                `;
             }
             renderTimetableGrid();
         };
@@ -601,6 +654,8 @@
 
                     if (currentViewMode === 'my') {
                         renderMySlotCell(slotCell, slotKey, day, hour);
+                    } else if (currentViewMode === 'friend') {
+                        renderSingleFriendSlotCell(slotCell, slotKey);
                     } else {
                         renderCompareSlotCell(slotCell, slotKey);
                     }
@@ -646,52 +701,101 @@
             `;
         }
 
+        function renderSingleFriendSlotCell(cell, slotKey) {
+            const dropdown = document.getElementById('singleFriendDropdown');
+            const selectedFriendId = dropdown ? dropdown.value : null;
+
+            if (!selectedFriendId || !friendsTimetables[selectedFriendId]) {
+                cell.className = "p-2 rounded-xl border border-slate-800/80 bg-slate-900/20 text-slate-600 min-h-[52px] flex items-center justify-center text-[10px]";
+                cell.innerText = "--";
+                return;
+            }
+
+            const friendData = friendsTimetables[selectedFriendId];
+            const slotData = (friendData.timetable && friendData.timetable[activeWeek] && friendData.timetable[activeWeek][slotKey]) || null;
+            const status = slotData ? slotData.status : 'empty';
+            const note = slotData ? slotData.note : '';
+
+            let bgStyle = "bg-slate-900/30 border-slate-800/80 text-slate-500";
+            let badge = "";
+
+            if (status === 'free') {
+                bgStyle = "bg-emerald-500/10 border-emerald-500/30 text-emerald-300";
+                badge = `<span class="w-2 h-2 rounded-full bg-emerald-400 shrink-0"></span>`;
+            } else if (status === 'busy') {
+                bgStyle = "bg-rose-500/10 border-rose-500/30 text-rose-300";
+                badge = `<span class="w-2 h-2 rounded-full bg-rose-400 shrink-0"></span>`;
+            } else if (status === 'flexible') {
+                bgStyle = "bg-amber-500/10 border-amber-500/30 text-amber-300";
+                badge = `<span class="w-2 h-2 rounded-full bg-amber-400 shrink-0"></span>`;
+            } else if (status === 'work') {
+                bgStyle = "bg-indigo-500/10 border-indigo-500/30 text-indigo-300";
+                badge = `<span class="w-2 h-2 rounded-full bg-indigo-400 shrink-0"></span>`;
+            }
+
+            cell.className = `p-2 rounded-xl border transition-all min-h-[52px] flex flex-col justify-between ${bgStyle}`;
+
+            cell.innerHTML = `
+                <div class="flex items-center justify-between gap-1">
+                    <span class="text-[10px] font-semibold opacity-70">${status !== 'empty' ? status.toUpperCase() : ''}</span>
+                    ${badge}
+                </div>
+                <div class="text-xs font-medium truncate mt-1 text-slate-200">${escapeHtml(note)}</div>
+            `;
+        }
+
         function renderCompareSlotCell(cell, slotKey) {
             const activeFriendIds = Array.from(selectedFriendsForComparison);
+            const participants = [];
+
+            // Include user
             const mySlot = (myTimetable[activeWeek] && myTimetable[activeWeek][slotKey]) || null;
-            const isMeFree = mySlot && (mySlot.status === 'free' || mySlot.status === 'flexible');
+            if (mySlot && (mySlot.status === 'free' || mySlot.status === 'flexible')) {
+                participants.push({ name: 'You', status: mySlot.status });
+            }
 
-            const freeFriends = [];
-
+            // Include checked friends
             activeFriendIds.forEach(fId => {
                 const fData = friendsTimetables[fId];
                 if (fData && fData.timetable && fData.timetable[activeWeek]) {
                     const slot = fData.timetable[activeWeek][slotKey];
                     if (slot && (slot.status === 'free' || slot.status === 'flexible')) {
-                        freeFriends.push(fData.displayName || 'Friend');
+                        participants.push({ name: fData.displayName || 'Friend', status: slot.status });
                     }
                 }
             });
 
-            if (isMeFree) {
-                freeFriends.unshift('You');
-            }
+            const freeCount = participants.filter(p => p.status === 'free').length;
+            const flexCount = participants.filter(p => p.status === 'flexible').length;
 
             let bgStyle = "bg-slate-900/30 border-slate-800/80 text-slate-500";
 
-            if (freeFriends.length > 1) {
+            if (freeCount > 0) {
+                // If there's at least one free person, cell is green
                 bgStyle = "bg-emerald-500/20 border-emerald-500/50 text-emerald-200 ring-1 ring-emerald-500/30";
-            } else if (freeFriends.length === 1) {
-                bgStyle = "bg-slate-800/60 border-slate-700/60 text-slate-300";
+            } else if (flexCount > 0) {
+                // If there are only flexible people, cell is yellow
+                bgStyle = "bg-amber-500/20 border-amber-500/50 text-amber-200 ring-1 ring-amber-500/30";
             }
 
             cell.className = `p-2 rounded-xl border transition-all min-h-[52px] flex flex-col justify-between ${bgStyle}`;
 
-            let content = '';
-            if (freeFriends.length > 0) {
-                content = `
-                    <div class="text-[10px] font-bold text-emerald-400 mb-1 flex items-center gap-1">
-                        <i class="fa-solid fa-users text-[9px]"></i> ${freeFriends.length} Free
+            if (participants.length > 0) {
+                cell.innerHTML = `
+                    <div class="text-[10px] font-bold ${freeCount > 0 ? 'text-emerald-400' : 'text-amber-400'} mb-1 flex items-center gap-1">
+                        <i class="fa-solid fa-users text-[9px]"></i> ${participants.length} Available
                     </div>
                     <div class="flex flex-wrap gap-1">
-                        ${freeFriends.map(name => `<span class="text-[9px] bg-slate-900/80 px-1.5 py-0.5 rounded border border-slate-700 text-slate-200 font-medium truncate max-w-full">${escapeHtml(name)}</span>`).join('')}
+                        ${participants.map(p => {
+                            const isFlexWithFree = (p.status === 'flexible' && freeCount > 0);
+                            const displayName = escapeHtml(p.name) + (isFlexWithFree ? '*' : '');
+                            return `<span class="text-[9px] bg-slate-900/80 px-1.5 py-0.5 rounded border border-slate-700 text-slate-200 font-medium truncate max-w-full">${displayName}</span>`;
+                        }).join('')}
                     </div>
                 `;
             } else {
-                content = `<div class="text-[10px] text-slate-600 text-center my-auto">--</div>`;
+                cell.innerHTML = `<div class="text-[10px] text-slate-600 text-center my-auto">--</div>`;
             }
-
-            cell.innerHTML = content;
         }
 
         window.openSlotModal = function(slotKey, day, hour) {
