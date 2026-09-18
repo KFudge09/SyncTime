@@ -534,124 +534,115 @@
             } else {
                 selectedFriendsForComparison.add(friendId);
             }
-            renderFriendsList();
             renderTimetableGrid();
         };
 
         function renderTimetableGrid() {
-            const grid = document.getElementById('timetableGrid');
-            grid.innerHTML = '';
+            const gridContainer = document.getElementById('timetableGrid');
+            let html = '';
 
             HOURS.forEach(hour => {
-                const hourStr = hour.toString().padStart(2, '0') + ':00';
-                const row = document.createElement('div');
-                row.className = 'grid grid-cols-8 gap-1.5 items-stretch';
-
-                const timeLabel = document.createElement('div');
-                timeLabel.className = 'text-[11px] font-mono text-slate-500 flex items-center justify-center py-2 bg-slate-900/30 rounded-lg';
-                timeLabel.innerText = hourStr;
-                row.appendChild(timeLabel);
+                const hourStr = `${hour.toString().padStart(2, '0')}:00`;
+                
+                html += `<div class="grid grid-cols-8 gap-1.5 items-center">`;
+                html += `<div class="text-[11px] font-mono text-slate-400 text-center">${hourStr}</div>`;
 
                 DAYS.forEach(day => {
-                    const slotKey = `${day}_${hour.toString().padStart(2, '0')}00`;
-                    const cell = document.createElement('div');
-                    cell.className = 'min-h-[48px] rounded-lg border p-1.5 flex flex-col justify-between cursor-pointer transition-all duration-150 relative text-xs select-none';
-
+                    const slotKey = `${day}_${hour}`;
+                    
                     if (currentViewMode === 'my') {
                         const slotData = (myTimetable[activeWeek] && myTimetable[activeWeek][slotKey]) || null;
-                        applySlotStyling(cell, slotData);
-                        cell.onclick = () => openSlotModal(activeWeek, day, hour, slotData);
+                        html += renderMySlotCell(day, hour, slotKey, slotData);
                     } else {
-                        // Compare Friends Mode
-                        const activeFriends = Array.from(selectedFriendsForComparison);
-                        const mySlot = (myTimetable[activeWeek] && myTimetable[activeWeek][slotKey]) || null;
-                        
-                        let totalFree = (mySlot && (mySlot.status === 'free' || mySlot.status === 'flexible')) ? 1 : 0;
-                        let busyCount = (mySlot && mySlot.status === 'busy') ? 1 : 0;
-                        
-                        let freeNames = [];
-                        if (mySlot && (mySlot.status === 'free' || mySlot.status === 'flexible')) {
-                            freeNames.push('You');
-                        }
-
-                        activeFriends.forEach(fId => {
-                            const fTable = friendsTimetables[fId]?.timetable;
-                            const fSlot = fTable && fTable[activeWeek] && fTable[activeWeek][slotKey];
-                            if (fSlot && (fSlot.status === 'free' || fSlot.status === 'flexible')) {
-                                totalFree++;
-                                freeNames.push(friendsTimetables[fId]?.displayName || 'Friend');
-                            } else if (fSlot && fSlot.status === 'busy') {
-                                busyCount++;
-                            }
-                        });
-
-                        const totalParticipants = activeFriends.length + 1;
-
-                        if (totalFree === totalParticipants && totalParticipants > 0) {
-                            // Perfect Overlap!
-                            cell.className += ' bg-emerald-500/20 border-emerald-500/80 text-emerald-200 shadow-md shadow-emerald-500/10';
-                            cell.innerHTML = `
-                                <div class="font-bold text-[10px] flex items-center gap-1 text-emerald-400">
-                                    <i class="fa-solid fa-circle-check"></i> Free!
-                                </div>
-                                <div class="text-[9px] opacity-80 truncate">${totalFree}/${totalParticipants} Available</div>
-                            `;
-                        } else if (totalFree > 0) {
-                            cell.className += ' bg-slate-800/80 border-slate-700/60 text-slate-300';
-                            cell.innerHTML = `
-                                <div class="text-[10px] font-semibold text-slate-400">${totalFree}/${totalParticipants} Free</div>
-                                <div class="text-[9px] text-slate-500 truncate">${freeNames.join(', ')}</div>
-                            `;
-                        } else {
-                            cell.className += ' bg-slate-900/40 border-slate-800/80 text-slate-600 opacity-60';
-                            cell.innerHTML = `<div class="text-[10px] text-center my-auto">-</div>`;
-                        }
+                        html += renderComparisonSlotCell(day, hour, slotKey);
                     }
-
-                    row.appendChild(cell);
                 });
 
-                grid.appendChild(row);
+                html += `</div>`;
             });
+
+            gridContainer.innerHTML = html;
         }
 
-        function applySlotStyling(element, slotData) {
-            if (!slotData || !slotData.status) {
-                element.className += ' bg-slate-900/40 border-slate-800/80 hover:border-slate-700 text-slate-500';
-                element.innerHTML = `<span class="text-[10px] text-slate-600 group-hover:text-slate-400">+ Add</span>`;
-                return;
+        function renderMySlotCell(day, hour, slotKey, slotData) {
+            let bgClass = 'bg-slate-900/40 border-slate-800 hover:border-slate-600';
+            let textContent = '';
+            let statusIndicator = '';
+
+            if (slotData) {
+                switch (slotData.status) {
+                    case 'free':
+                        bgClass = 'bg-emerald-500/15 border-emerald-500/40 text-emerald-200 hover:bg-emerald-500/25';
+                        statusIndicator = '<span class="w-2 h-2 rounded-full bg-emerald-400"></span>';
+                        break;
+                    case 'busy':
+                        bgClass = 'bg-rose-500/15 border-rose-500/40 text-rose-200 hover:bg-rose-500/25';
+                        statusIndicator = '<span class="w-2 h-2 rounded-full bg-rose-400"></span>';
+                        break;
+                    case 'flexible':
+                        bgClass = 'bg-amber-500/15 border-amber-500/40 text-amber-200 hover:bg-amber-500/25';
+                        statusIndicator = '<span class="w-2 h-2 rounded-full bg-amber-400"></span>';
+                        break;
+                    case 'work':
+                        bgClass = 'bg-indigo-500/15 border-indigo-500/40 text-indigo-200 hover:bg-indigo-500/25';
+                        statusIndicator = '<span class="w-2 h-2 rounded-full bg-indigo-400"></span>';
+                        break;
+                }
+                textContent = slotData.note ? escapeHtml(slotData.note) : slotData.status.toUpperCase();
             }
 
-            switch (slotData.status) {
-                case 'free':
-                    element.className += ' bg-emerald-500/15 border-emerald-500/50 hover:border-emerald-400 text-emerald-200';
-                    element.innerHTML = `
-                        <div class="font-semibold text-[11px] text-emerald-400">Free</div>
-                        <div class="text-[9px] opacity-80 truncate">${escapeHtml(slotData.note || '')}</div>
-                    `;
-                    break;
-                case 'busy':
-                    element.className += ' bg-rose-500/15 border-rose-500/50 hover:border-rose-400 text-rose-200';
-                    element.innerHTML = `
-                        <div class="font-semibold text-[11px] text-rose-400">Busy</div>
-                        <div class="text-[9px] opacity-80 truncate">${escapeHtml(slotData.note || '')}</div>
-                    `;
-                    break;
-                case 'flexible':
-                    element.className += ' bg-amber-500/15 border-amber-500/50 hover:border-amber-400 text-amber-200';
-                    element.innerHTML = `
-                        <div class="font-semibold text-[11px] text-amber-400">Flexible</div>
-                        <div class="text-[9px] opacity-80 truncate">${escapeHtml(slotData.note || '')}</div>
-                    `;
-                    break;
-                case 'work':
-                    element.className += ' bg-indigo-500/15 border-indigo-500/50 hover:border-indigo-400 text-indigo-200';
-                    element.innerHTML = `
-                        <div class="font-semibold text-[11px] text-indigo-400">Work/Class</div>
-                        <div class="text-[9px] opacity-80 truncate">${escapeHtml(slotData.note || '')}</div>
-                    `;
-                    break;
+            return `
+                <div onclick="openSlotModal('${day}', ${hour}, '${slotKey}')" 
+                     class="h-12 border rounded-xl p-1.5 flex flex-col justify-between cursor-pointer transition-all duration-150 relative group ${bgClass}">
+                    <div class="flex items-center justify-between w-full">
+                        ${statusIndicator}
+                        <i class="fa-solid fa-pen text-[9px] opacity-0 group-hover:opacity-60 transition-opacity ml-auto"></i>
+                    </div>
+                    <span class="text-[10px] font-semibold truncate leading-tight">${textContent}</span>
+                </div>
+            `;
+        }
+
+        function renderComparisonSlotCell(day, hour, slotKey) {
+            const mySlot = (myTimetable[activeWeek] && myTimetable[activeWeek][slotKey]) || null;
+            const isMeFree = mySlot && mySlot.status === 'free';
+
+            const activeFriendIds = Array.from(selectedFriendsForComparison);
+            let freeFriends = [];
+            let totalChecked = 1;
+
+            if (isMeFree) freeFriends.push('You');
+
+            activeFriendIds.forEach(id => {
+                totalChecked++;
+                const friendData = friendsTimetables[id];
+                if (friendData && friendData.timetable && friendData.timetable[activeWeek]) {
+                    const friendSlot = friendData.timetable[activeWeek][slotKey];
+                    if (friendSlot && friendSlot.status === 'free') {
+                        freeFriends.push(friendData.displayName || 'Friend');
+                    }
+                }
+            });
+
+            const allFree = totalChecked > 0 && freeFriends.length === totalChecked;
+            const someFree = freeFriends.length > 0;
+
+            let cellStyle = 'bg-slate-900/30 border-slate-800 text-slate-600';
+            let label = 'Busy';
+
+            if (allFree && totalChecked > 1) {
+                cellStyle = 'bg-emerald-500/25 border-emerald-500/60 text-emerald-200 shadow-md shadow-emerald-500/10';
+                label = `<i class="fa-solid fa-circle-check text-emerald-400 mr-1"></i> Perfect (${freeFriends.length}/${totalChecked})`;
+            } else if (someFree) {
+                cellStyle = 'bg-slate-800/80 border-slate-700 text-slate-300';
+                label = `${freeFriends.length}/${totalChecked} Free`;
             }
+
+            return `
+                <div class="h-12 border rounded-xl p-1.5 flex flex-col justify-center items-center text-center transition-all ${cellStyle}" title="Free: ${freeFriends.join(', ')}">
+                    <span class="text-[10px] font-semibold truncate leading-tight">${label}</span>
+                </div>
+            `;
         }
 
         window.setActiveWeek = function(week) {
@@ -665,11 +656,11 @@
             const btnB = document.getElementById('btnWeekB');
 
             if (activeWeek === 'A') {
-                btnA.className = 'flex-1 sm:flex-initial px-5 py-2.5 rounded-lg text-sm font-semibold bg-cyan-600 text-white shadow-md shadow-cyan-600/20';
-                btnB.className = 'flex-1 sm:flex-initial px-5 py-2.5 rounded-lg text-sm font-semibold text-slate-400 hover:text-slate-200';
+                btnA.className = "flex-1 sm:flex-initial px-5 py-2.5 rounded-lg text-sm font-semibold bg-cyan-600 text-white shadow-md shadow-cyan-600/20 transition-all duration-200 flex items-center justify-center gap-2";
+                btnB.className = "flex-1 sm:flex-initial px-5 py-2.5 rounded-lg text-sm font-semibold text-slate-400 hover:text-slate-200 transition-all duration-200 flex items-center justify-center gap-2";
             } else {
-                btnB.className = 'flex-1 sm:flex-initial px-5 py-2.5 rounded-lg text-sm font-semibold bg-cyan-600 text-white shadow-md shadow-cyan-600/20';
-                btnA.className = 'flex-1 sm:flex-initial px-5 py-2.5 rounded-lg text-sm font-semibold text-slate-400 hover:text-slate-200';
+                btnB.className = "flex-1 sm:flex-initial px-5 py-2.5 rounded-lg text-sm font-semibold bg-cyan-600 text-white shadow-md shadow-cyan-600/20 transition-all duration-200 flex items-center justify-center gap-2";
+                btnA.className = "flex-1 sm:flex-initial px-5 py-2.5 rounded-lg text-sm font-semibold text-slate-400 hover:text-slate-200 transition-all duration-200 flex items-center justify-center gap-2";
             }
         }
 
@@ -680,78 +671,97 @@
             const badge = document.getElementById('comparisonSummaryBadge');
 
             if (mode === 'my') {
-                btnMy.className = 'flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-semibold bg-cyan-600 text-white shadow-md shadow-cyan-600/20 hover:bg-cyan-500 transition-all flex items-center justify-center gap-1.5';
-                btnCompare.className = 'flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-semibold bg-slate-700 text-slate-300 hover:bg-slate-600 transition-all flex items-center justify-center gap-1.5 border border-slate-600';
+                btnMy.className = "flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-semibold bg-cyan-600 text-white shadow-md shadow-cyan-600/20 hover:bg-cyan-500 transition-all flex items-center justify-center gap-1.5";
+                btnCompare.className = "flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-semibold bg-slate-700 text-slate-300 hover:bg-slate-600 transition-all flex items-center justify-center gap-1.5 border border-slate-600";
                 badge.classList.add('hidden');
             } else {
-                btnCompare.className = 'flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-semibold bg-emerald-600 text-white shadow-md shadow-emerald-600/20 hover:bg-emerald-500 transition-all flex items-center justify-center gap-1.5';
-                btnMy.className = 'flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-semibold bg-slate-700 text-slate-300 hover:bg-slate-600 transition-all flex items-center justify-center gap-1.5 border border-slate-600';
+                btnCompare.className = "flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-semibold bg-emerald-600 text-white shadow-md shadow-emerald-600/20 hover:bg-emerald-500 transition-all flex items-center justify-center gap-1.5";
+                btnMy.className = "flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-semibold bg-slate-700 text-slate-300 hover:bg-slate-600 transition-all flex items-center justify-center gap-1.5 border border-slate-600";
                 badge.classList.remove('hidden');
             }
             renderTimetableGrid();
         };
 
-        window.openSlotModal = function(week, day, hour, slotData) {
-            currentEditingSlot = { week, day, hour };
-            const hourFormatted = hour.toString().padStart(2, '0') + ':00';
-            document.getElementById('slotModalTimeLabel').innerText = `Week ${week} • ${day} @ ${hourFormatted}`;
-            
-            currentSelectedModalStatus = slotData ? slotData.status : 'free';
-            selectModalStatus(currentSelectedModalStatus);
+        window.toggleRealWeekAnchor = async function() {
+            userProfile.realWeekAnchor = userProfile.realWeekAnchor === 'A' ? 'B' : 'A';
+            document.getElementById('currentRealWeekBadge').innerText = `Week ${userProfile.realWeekAnchor}`;
+            await saveProfileToFirestore();
+            showToast(`Current Real-World Week set to Week ${userProfile.realWeekAnchor}`, "info");
+        };
 
-            document.getElementById('slotNoteInput').value = slotData ? (slotData.note || '') : '';
+        window.openSlotModal = function(day, hour, slotKey) {
+            currentEditingSlot = { day, hour, slotKey };
+            const timeLabel = `Week ${activeWeek} • ${day} @ ${hour.toString().padStart(2, '0')}:00 - ${(hour + 1).toString().padStart(2, '0')}:00`;
+            document.getElementById('slotModalTimeLabel').innerText = timeLabel;
+
+            const existingData = myTimetable[activeWeek] ? myTimetable[activeWeek][slotKey] : null;
+            if (existingData) {
+                selectModalStatus(existingData.status || 'free');
+                document.getElementById('slotNoteInput').value = existingData.note || '';
+            } else {
+                selectModalStatus('free');
+                document.getElementById('slotNoteInput').value = '';
+            }
+
             document.getElementById('slotModal').classList.remove('hidden');
         };
 
         window.closeSlotModal = function() {
             document.getElementById('slotModal').classList.add('hidden');
+            currentEditingSlot = null;
         };
 
         window.selectModalStatus = function(status) {
             currentSelectedModalStatus = status;
-            ['free', 'busy', 'flexible', 'work'].forEach(st => {
-                const btn = document.getElementById(`btnStatus${st.charAt(0).toUpperCase() + st.slice(1)}`);
-                if (st === status) {
-                    btn.className = 'p-3 rounded-xl border text-xs font-semibold text-left flex items-center gap-2 transition-all border-cyan-500 bg-cyan-500/10 text-white';
+            const buttons = {
+                free: document.getElementById('btnStatusFree'),
+                busy: document.getElementById('btnStatusBusy'),
+                flexible: document.getElementById('btnStatusFlexible'),
+                work: document.getElementById('btnStatusWork')
+            };
+
+            Object.keys(buttons).forEach(key => {
+                if (key === status) {
+                    buttons[key].className = "p-3 rounded-xl border text-xs font-semibold text-left flex items-center gap-2 transition-all border-cyan-500 bg-slate-700/80 text-white ring-2 ring-cyan-500/30";
                 } else {
-                    btn.className = 'p-3 rounded-xl border text-xs font-semibold text-left flex items-center gap-2 transition-all border-slate-700 bg-slate-900/40 text-slate-400 hover:border-slate-600';
+                    buttons[key].className = "p-3 rounded-xl border border-slate-700 text-xs font-semibold text-left flex items-center gap-2 transition-all bg-slate-900/50 text-slate-400 hover:border-slate-600";
                 }
             });
         };
 
         window.saveSlotData = async function() {
             if (!currentEditingSlot) return;
-            const { week, day, hour } = currentEditingSlot;
-            const slotKey = `${day}_${hour.toString().padStart(2, '0')}00`;
+
             const note = document.getElementById('slotNoteInput').value.trim();
 
-            if (!myTimetable[week]) myTimetable[week] = {};
-            myTimetable[week][slotKey] = {
+            if (!myTimetable[activeWeek]) {
+                myTimetable[activeWeek] = {};
+            }
+
+            myTimetable[activeWeek][currentEditingSlot.slotKey] = {
                 status: currentSelectedModalStatus,
                 note: note
             };
 
             await saveTimetableToFirestore();
             closeSlotModal();
-            renderTimetableGrid();
             showToast("Schedule updated!", "success");
         };
 
         window.clearSlotData = async function() {
             if (!currentEditingSlot) return;
-            const { week, day, hour } = currentEditingSlot;
-            const slotKey = `${day}_${hour.toString().padStart(2, '0')}00`;
 
-            if (myTimetable[week] && myTimetable[week][slotKey]) {
-                delete myTimetable[week][slotKey];
+            if (myTimetable[activeWeek] && myTimetable[activeWeek][currentEditingSlot.slotKey]) {
+                delete myTimetable[activeWeek][currentEditingSlot.slotKey];
                 await saveTimetableToFirestore();
             }
+
             closeSlotModal();
-            renderTimetableGrid();
             showToast("Slot cleared", "info");
         };
 
         window.openProfileModal = function() {
+            document.getElementById('profileNameInput').value = userProfile.displayName;
             document.getElementById('profileModal').classList.remove('hidden');
         };
 
@@ -763,17 +773,12 @@
             const newName = document.getElementById('profileNameInput').value.trim();
             if (newName) {
                 userProfile.displayName = newName;
+                document.getElementById('headerDisplayName').innerText = newName;
                 await saveProfileToFirestore();
                 await saveTimetableToFirestore();
-                closeProfileModal();
                 showToast("Profile updated!", "success");
             }
-        };
-
-        window.toggleRealWeekAnchor = async function() {
-            userProfile.realWeekAnchor = userProfile.realWeekAnchor === 'A' ? 'B' : 'A';
-            await saveProfileToFirestore();
-            showToast(`Calendar week set to Week ${userProfile.realWeekAnchor}`, "info");
+            closeProfileModal();
         };
 
         window.openHostingGuideModal = function() {
@@ -785,24 +790,41 @@
         };
 
         window.copyShareCode = function() {
-            if (!currentUser) return;
-            navigator.clipboard.writeText(currentUser.uid);
-            showToast("Share code copied to clipboard!", "success");
+            const code = userProfile.shareCode;
+            if (!code) return;
+
+            navigator.clipboard.writeText(code).then(() => {
+                showToast("Share Code copied to clipboard!", "success");
+            }).catch(err => {
+                console.error('Clipboard copy error:', err);
+                showToast("Failed to copy code.", "error");
+            });
         };
 
-        function showToast(message, type = 'info') {
-            const container = document.getElementById('toastBox');
+        function showToast(message, type = "info") {
+            const toastBox = document.getElementById('toastBox');
             const toast = document.createElement('div');
-            
-            let bg = 'bg-slate-800 border-slate-700 text-slate-200';
-            if (type === 'success') bg = 'bg-emerald-900/90 border-emerald-600 text-emerald-100';
-            if (type === 'error') bg = 'bg-rose-900/90 border-rose-600 text-rose-100';
 
-            toast.className = `px-4 py-2.5 rounded-xl border text-xs font-medium shadow-xl backdrop-blur transition-all duration-300 transform translate-y-2 opacity-0 pointer-events-auto ${bg}`;
-            toast.innerText = message;
+            let icon = 'fa-circle-info text-cyan-400';
+            let borderColor = 'border-cyan-500/30';
 
-            container.appendChild(toast);
-            setTimeout(() => toast.classList.remove('translate-y-2', 'opacity-0'), 10);
+            if (type === 'success') {
+                icon = 'fa-circle-check text-emerald-400';
+                borderColor = 'border-emerald-500/30';
+            } else if (type === 'error') {
+                icon = 'fa-circle-xmark text-rose-400';
+                borderColor = 'border-rose-500/30';
+            }
+
+            toast.className = `bg-slate-800/95 border ${borderColor} text-slate-200 text-xs px-4 py-3 rounded-xl shadow-xl flex items-center gap-2.5 backdrop-blur-md pointer-events-auto transition-all duration-300 transform translate-y-2 opacity-0`;
+            toast.innerHTML = `<i class="fa-solid ${icon} text-sm"></i> <span>${escapeHtml(message)}</span>`;
+
+            toastBox.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            }, 10);
+
             setTimeout(() => {
                 toast.classList.add('opacity-0', 'translate-y-2');
                 setTimeout(() => toast.remove(), 300);
@@ -810,7 +832,16 @@
         }
 
         function escapeHtml(str) {
-            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+            if (!str) return '';
+            return str.replace(/[&<>"']/g, function(m) {
+                return {
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#039;'
+                }[m];
+            });
         }
     </script>
 </body>
