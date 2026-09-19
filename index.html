@@ -445,7 +445,11 @@
             
             onSnapshot(timetableRef, (snap) => {
                 if (snap.exists()) {
-                    myTimetable = snap.data().timetable || { 'A': {}, 'B': {} };
+                    const data = snap.data();
+                    // Ensure the timetable structure is fully initialized for both A and B weeks
+                    myTimetable = data.timetable || { 'A': {}, 'B': {} };
+                    if (!myTimetable['A']) myTimetable['A'] = {};
+                    if (!myTimetable['B']) myTimetable['B'] = {};
                 } else {
                     myTimetable = { 'A': {}, 'B': {} };
                     saveTimetableToFirestore();
@@ -460,7 +464,7 @@
             await setDoc(timetableRef, {
                 userId: currentUser.uid,
                 displayName: userProfile.displayName,
-                timetable: myTimetable,
+                timetable: JSON.parse(JSON.stringify(myTimetable)), // Deep clone to ensure clean object serialization
                 updatedAt: new Date().toISOString()
             }, { merge: true });
         }
@@ -867,9 +871,14 @@
             const note = document.getElementById('slotNoteInput').value.trim();
 
             if (!myTimetable[week]) myTimetable[week] = {};
-            myTimetable[week][slotKey] = {
-                status: currentSelectedModalStatus,
-                note: note
+            
+            // Re-create the week object cleanly to prevent deep nested reactivity or proxy reference locks
+            myTimetable[week] = {
+                ...myTimetable[week],
+                [slotKey]: {
+                    status: currentSelectedModalStatus,
+                    note: note
+                }
             };
 
             await saveTimetableToFirestore();
@@ -884,7 +893,11 @@
             const slotKey = `${day}_${timeSlot}`;
 
             if (myTimetable[week] && myTimetable[week][slotKey]) {
-                delete myTimetable[week][slotKey];
+                // Create a shallow copy excluding the deleted key to ensure robust state mutation and Firestore sync
+                const updatedWeek = { ...myTimetable[week] };
+                delete updatedWeek[slotKey];
+                myTimetable[week] = updatedWeek;
+                
                 await saveTimetableToFirestore();
             }
 
