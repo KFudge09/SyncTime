@@ -768,7 +768,8 @@
                         }
 
                         slotCell.className = `min-h-[48px] p-1.5 rounded-xl border text-xs transition-all flex flex-col justify-center gap-0.5 ${compareBg}`;
-                        slotCell.onclick = () => openCompareMode ? openCompareModal(day, timeSlot) : null;
+                        // Fixed: properly check currentViewMode === 'compare' to invoke modal
+                        slotCell.onclick = () => currentViewMode === 'compare' ? openCompareModal(day, timeSlot) : null;
 
                         if (totalAvailable === 0) {
                             slotCell.innerHTML = `<span class="text-[10px] text-slate-500 text-center block">Unavailable</span>`;
