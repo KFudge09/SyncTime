@@ -147,7 +147,7 @@
                     <!-- Single Friend View Selector Dropdown -->
                     <div id="singleFriendSelectorContainer" class="hidden flex-col gap-1 pb-2 border-b border-slate-700/60">
                         <label for="singleFriendDropdown" class="text-[10px] font-bold uppercase text-purple-400 tracking-wider">Select Friend to View:</label>
-                        <select id="singleFriendDropdown" onchange="renderTimetableGrid()" class="bg-slate-900 border border-slate-700 text-xs text-slate-200 rounded-xl p-2 outline-none focus:border-purple-500 w-full cursor-pointer">
+                        <select id="singleFriendDropdown" onchange="handleFriendDropdownChange(this.value)" class="bg-slate-900 border border-slate-700 text-xs text-slate-200 rounded-xl p-2 outline-none focus:border-purple-500 w-full cursor-pointer">
                         </select>
                     </div>
 
@@ -585,7 +585,6 @@
                 const name = friendData ? (friendData.displayName || `Friend (${friendId.substring(0, 6)})`) : `Friend (${friendId.substring(0, 6)})`;
                 const isSelected = selectedFriendsForComparison.has(friendId);
 
-                // Checkboxes are ONLY shown in compare mode now!
                 const isCompareMode = currentViewMode === 'compare';
 
                 return `
@@ -629,6 +628,11 @@
             }).join('');
         }
 
+        window.handleFriendDropdownChange = function(friendId) {
+            selectedSingleFriendId = friendId;
+            renderTimetableGrid();
+        };
+
         window.toggleFriendComparison = function(friendId) {
             if (selectedFriendsForComparison.has(friendId)) {
                 selectedFriendsForComparison.delete(friendId);
@@ -653,7 +657,6 @@
                 singleSelector.classList.remove('flex');
             }
 
-            // Refresh friends list representation (to show/hide checkboxes based on current view mode)
             renderFriendsList();
 
             const isCompareMode = currentViewMode === 'compare';
