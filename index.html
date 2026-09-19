@@ -312,7 +312,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, onSnapshot, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, getDoc, onSnapshot, deleteDoc, deleteField } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'synctime-app';
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
@@ -445,7 +445,6 @@
             onSnapshot(timetableRef, (snap) => {
                 if (snap.exists()) {
                     const data = snap.data();
-                    // Ensure the timetable structure is fully initialized for both A and B weeks
                     myTimetable = data.timetable || { 'A': {}, 'B': {} };
                     if (!myTimetable['A']) myTimetable['A'] = {};
                     if (!myTimetable['B']) myTimetable['B'] = {};
@@ -463,7 +462,7 @@
             await setDoc(timetableRef, {
                 userId: currentUser.uid,
                 displayName: userProfile.displayName,
-                timetable: JSON.parse(JSON.stringify(myTimetable)), // Deep clone to ensure clean object serialization
+                timetable: JSON.parse(JSON.stringify(myTimetable)),
                 updatedAt: new Date().toISOString()
             }, { merge: true });
         }
@@ -890,13 +889,22 @@
             const { week, day, timeSlot } = currentEditingSlot;
             const slotKey = `${day}_${timeSlot}`;
 
-            if (!myTimetable[week]) myTimetable[week] = {};
+            if (myTimetable[week] && myTimetable[week][slotKey]) {
+                delete myTimetable[week][slotKey];
+            }
 
-            const updatedWeek = { ...myTimetable[week] };
-            delete updatedWeek[slotKey];
-            myTimetable[week] = updatedWeek;
+            if (!currentUser) return;
+            const timetableRef = doc(db, 'artifacts', appId, 'public', 'data', 'timetables', currentUser.uid);
+            
+            await setDoc(timetableRef, {
+                timetable: {
+                    [week]: {
+                        [slotKey]: deleteField()
+                    }
+                },
+                updatedAt: new Date().toISOString()
+            }, { merge: true });
 
-            await saveTimetableToFirestore();
             closeSlotModal();
             renderTimetableGrid();
             showToast("Slot cleared successfully", "info");
