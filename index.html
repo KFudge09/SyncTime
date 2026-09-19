@@ -614,7 +614,11 @@
                 return;
             }
 
-            if (!selectedSingleFriendId || !userProfile.friends.includes(selectedSingleFriendId)) {
+            // Remember what was selected before re-rendering
+            const currentDropdownVal = dropdown.value;
+            if (currentDropdownVal && userProfile.friends.includes(currentDropdownVal)) {
+                selectedSingleFriendId = currentDropdownVal;
+            } else if (!selectedSingleFriendId || !userProfile.friends.includes(selectedSingleFriendId)) {
                 selectedSingleFriendId = userProfile.friends[0];
             }
 
