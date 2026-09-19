@@ -871,7 +871,6 @@
 
             if (!myTimetable[week]) myTimetable[week] = {};
             
-            // Re-create the week object cleanly to prevent deep nested reactivity or proxy reference locks
             myTimetable[week] = {
                 ...myTimetable[week],
                 [slotKey]: {
@@ -891,15 +890,13 @@
             const { week, day, timeSlot } = currentEditingSlot;
             const slotKey = `${day}_${timeSlot}`;
 
-            if (myTimetable[week] && myTimetable[week][slotKey]) {
-                // Create a shallow copy excluding the deleted key to ensure robust state mutation and Firestore sync
-                const updatedWeek = { ...myTimetable[week] };
-                delete updatedWeek[slotKey];
-                myTimetable[week] = updatedWeek;
-                
-                await saveTimetableToFirestore();
-            }
+            if (!myTimetable[week]) myTimetable[week] = {};
 
+            const updatedWeek = { ...myTimetable[week] };
+            delete updatedWeek[slotKey];
+            myTimetable[week] = updatedWeek;
+
+            await saveTimetableToFirestore();
             closeSlotModal();
             renderTimetableGrid();
             showToast("Slot cleared successfully", "info");
@@ -953,8 +950,7 @@
                         <div class="flex flex-col gap-1.5">
                             ${freeList.map(p => `
                                 <div class="bg-slate-900/60 p-2 rounded-lg border border-slate-700/40 text-xs flex flex-col">
-                                    <span class="font-semibold text-slate-200">${escapeHtml(p.name)}</span>
-                                    ${p.note ? `<span class="text-[11px] text-emerald-300 italic mt-0.5">"${escapeHtml(p.note)}"</span>` : ''}
+                                    <span class="font-semibold text-slate-200">${escapeHtml(p.name)}</span>${p.note ? `<span class="text-[11px] text-emerald-300 italic mt-0.5">"${escapeHtml(p.note)}"</span>` : ''}
                                 </div>
                             `).join('')}
                         </div>
@@ -971,8 +967,7 @@
                         <div class="flex flex-col gap-1.5">
                             ${flexList.map(p => `
                                 <div class="bg-slate-900/60 p-2 rounded-lg border border-slate-700/40 text-xs flex flex-col">
-                                    <span class="font-semibold text-slate-200">${escapeHtml(p.name)}</span>
-                                    ${p.note ? `<span class="text-[11px] text-amber-300 italic mt-0.5">"${escapeHtml(p.note)}"</span>` : ''}
+                                    <span class="font-semibold text-slate-200">${escapeHtml(p.name)}</span>${p.note ? `<span class="text-[11px] text-amber-300 italic mt-0.5">"${escapeHtml(p.note)}"</span>` : ''}
                                 </div>
                             `).join('')}
                         </div>
@@ -990,8 +985,7 @@
                             ${unavailableList.map(p => `
                                 <div class="bg-slate-900/80 p-2 rounded-lg border border-slate-800 text-xs flex justify-between items-center text-slate-400">
                                     <div class="flex flex-col">
-                                        <span class="font-medium text-slate-300">${escapeHtml(p.name)}</span>
-                                        ${p.note ? `<span class="text-[10px] text-slate-500 italic">"${escapeHtml(p.note)}"</span>` : ''}
+                                        <span class="font-medium text-slate-300">${escapeHtml(p.name)}</span>${p.note ? `<span class="text-[10px] text-slate-500 italic">"${escapeHtml(p.note)}"</span>` : ''}
                                     </div>
                                     <span class="text-[10px] capitalize bg-slate-800 px-2 py-0.5 rounded text-slate-400 border border-slate-700">${p.status !== 'none' ? escapeHtml(p.status) : 'not set'}</span>
                                 </div>
